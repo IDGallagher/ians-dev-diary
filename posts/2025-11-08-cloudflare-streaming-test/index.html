@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <script type="module" src="/post-init.js"></script>
+</head>
+
+<body>
+  <site-header brand="My Blog" sticky></site-header>
+
+  <post-hero
+    title="Cloudflare Streaming Test"
+    subtitle="Playing live WebRTC streams using WHEP"
+    date="2025-11-08"
+    tags="streaming, webrtc, whep">
+  </post-hero>
+
+  <article style="max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.8;">
+    
+    <h2>What is WHEP?</h2>
+    <p>
+      <strong>WHEP (WebRTC-HTTP Egress Protocol)</strong> is a modern standard for consuming 
+      WebRTC streams in web browsers. Unlike traditional RTMP streams that require server-side 
+      transcoding to HLS or DASH, WHEP allows direct WebRTC playback with ultra-low latency.
+    </p>
+
+    <info-box>
+      <p><strong>Why can't we use RTMPS directly?</strong></p>
+      <p>Browsers don't allow JavaScript to make arbitrary TCP connections for security reasons. 
+      While tools like FFmpeg can connect to RTMPS feeds directly, web browsers are sandboxed 
+      and only support specific protocols: HTTP(S), WebSocket, and WebRTC.</p>
+    </info-box>
+
+    <h2>How WHEP Works</h2>
+    <p>The protocol is elegantly simple:</p>
+    <ol>
+      <li><strong>Create RTCPeerConnection</strong> - Standard WebRTC peer connection</li>
+      <li><strong>Generate SDP Offer</strong> - Describe what media we want to receive</li>
+      <li><strong>POST to WHEP URL</strong> - Send the offer via HTTP</li>
+      <li><strong>Receive SDP Answer</strong> - Server responds with connection details</li>
+      <li><strong>Media Flows!</strong> - WebRTC connection established, video plays</li>
+    </ol>
+
+    <h2>Our Custom Component</h2>
+    <p>
+      I've created a <code>&lt;whep-player&gt;</code> custom element that handles all the 
+      WebRTC complexity. It automatically:
+    </p>
+    <ul>
+      <li>Creates and manages the RTCPeerConnection</li>
+      <li>Handles SDP offer/answer exchange</li>
+      <li>Attaches incoming media to a video element</li>
+      <li>Provides status feedback and error handling</li>
+      <li>Cleans up connections when removed from the page</li>
+    </ul>
+
+    <h2>Live Demo</h2>
+    <p>
+      Here's a live WHEP stream player. Note: You'll need a valid WHEP endpoint URL 
+      to see this in action. Replace the URL below with your Cloudflare Stream WHEP URL:
+    </p>
+
+    <div style="margin: 30px 0;">
+      <whep-player 
+        url="https://customer-unbh482haiyntymz.cloudflarestream.com/e9a9b94c1f6b5a521478da916f95600d/webRTC/play"
+        autoplay
+        muted
+        retry>
+      </whep-player>
+    </div>
+
+    <info-box>
+      <p><strong>Getting a WHEP URL from Cloudflare Stream:</strong></p>
+      <ol>
+        <li>Set up a live stream in Cloudflare Stream</li>
+        <li>Enable WebRTC playback</li>
+        <li>Copy the WHEP endpoint URL</li>
+        <li>Replace the URL in the component above</li>
+      </ol>
+    </info-box>
+
+    <h2>Advantages of WHEP</h2>
+    <ul>
+      <li><strong>Ultra-low latency</strong> - Sub-second delay, much better than HLS (4-10s)</li>
+      <li><strong>Native browser support</strong> - Uses standard WebRTC APIs</li>
+      <li><strong>Simple protocol</strong> - Just HTTP + SDP, no complex signaling servers</li>
+      <li><strong>Adaptive bitrate</strong> - WebRTC handles network conditions automatically</li>
+      <li><strong>Secure by default</strong> - Encrypted streams, CORS-friendly</li>
+    </ul>
+
+    <h2>Browser Compatibility</h2>
+    <p>
+      WHEP works in all modern browsers that support WebRTC:
+    </p>
+    <ul>
+      <li>✅ Chrome/Edge 56+</li>
+      <li>✅ Firefox 44+</li>
+      <li>✅ Safari 11+</li>
+      <li>✅ Mobile browsers (iOS Safari, Chrome Mobile)</li>
+    </ul>
+
+    <h2>The Code</h2>
+    <p>
+      The full implementation is available in 
+      <code>/components/whep-player.js</code>. The component demonstrates:
+    </p>
+    <ul>
+      <li>Creating transceivers with <code>recvonly</code> direction</li>
+      <li>Proper SDP exchange via HTTP POST</li>
+      <li>Connection state monitoring</li>
+      <li>Resource cleanup on disconnect</li>
+    </ul>
+
+    <h2>Further Reading</h2>
+    <ul>
+      <li><a href="https://www.ietf.org/archive/id/draft-murillo-whep-00.html" target="_blank">WHEP Draft Specification</a></li>
+      <li><a href="https://developers.cloudflare.com/stream/webrtc/" target="_blank">Cloudflare Stream WebRTC Docs</a></li>
+      <li><a href="https://webrtc.org/" target="_blank">WebRTC.org</a></li>
+    </ul>
+
+  </article>
+
+  <site-footer></site-footer>
+</body>
+</html>
+

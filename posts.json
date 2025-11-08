@@ -1,5 +1,12 @@
 [
   {
+    "slug": "2025-11-08-cloudflare-streaming-test",
+    "title": "Cloudflare Streaming Test",
+    "subtitle": "Playing live WebRTC streams using WHEP",
+    "date": "2025-11-08",
+    "tags": ["streaming", "webrtc", "whep"]
+  },
+  {
     "slug": "2025-05-23-spiral-points",
     "title": "Trigonometric Underwater Creatures",
     "subtitle": "Amazing mathematical animals by @yuruyurau on twitter",
