@@ -45,10 +45,14 @@ function makeCard({ slug, title, subtitle, cover, date, tags }) {
   const a = document.createElement("a");
   a.href  = `/posts/${slug}/`;
   a.className = "card";
-  const imageSrc = cover ? cover : `/posts/${slug}/cover.png`;
+  
+  // Support both SVG and PNG images: try SVG first, fallback to PNG
+  const imageSrc = cover ? cover : `/posts/${slug}/cover.svg`;
+  const fallbackSrc = `/posts/${slug}/cover.png`;
+  
   const tagsHtml = tags ? tags.map(tag => `<span class="tag">${tag}</span>`).join('') : '';
   a.innerHTML = `
-      <img src="${imageSrc}" alt="${title}">
+      <img src="${imageSrc}" onerror="this.onerror=null; this.src='${fallbackSrc}';" alt="${title}">
       <div class="card-body">
         <p class="date">${new Date(date).toLocaleDateString()}</p>
         <h3>${title}</h3>
