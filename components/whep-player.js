@@ -18,6 +18,7 @@ customElements.define("whep-player", class extends HTMLElement {
     
     // Detect mobile for audio handling
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    console.log('Mobile detected:', isMobile, 'UserAgent:', navigator.userAgent);
 
     this.innerHTML = `
       <div style="position: relative; width: 100%; max-width: 100%;">
@@ -39,33 +40,49 @@ customElements.define("whep-player", class extends HTMLElement {
     
     // Mobile audio unmute handler
     if (isMobile && mobileUnmute) {
+      console.log('Setting up mobile unmute handlers');
       let isSetup = false;
       
       // Show unmute button after video starts playing
       video.addEventListener('playing', () => {
+        console.log('Video playing event fired, muted:', video.muted);
         if (!isSetup && video.muted) {
+          console.log('Showing mobile unmute button');
           mobileUnmute.style.display = 'block';
           isSetup = true;
         }
       });
       
+      // Also check on loadeddata
+      video.addEventListener('loadeddata', () => {
+        console.log('Video loaded, showing unmute button immediately');
+        if (video.muted) {
+          mobileUnmute.style.display = 'block';
+        }
+      });
+      
       // Handle tap to unmute
-      mobileUnmute.addEventListener('click', () => {
+      mobileUnmute.addEventListener('click', (e) => {
+        e.stopPropagation();
+        console.log('Unmute button clicked');
         video.muted = false;
         video.volume = 1.0;
         mobileUnmute.style.display = 'none';
-        console.log('Mobile: unmuted via user interaction');
+        console.log('Mobile: unmuted via button, muted now:', video.muted);
       });
       
       // Also unmute if user taps the video directly
       video.addEventListener('click', () => {
         if (video.muted) {
+          console.log('Video clicked while muted');
           video.muted = false;
           video.volume = 1.0;
           if (mobileUnmute) mobileUnmute.style.display = 'none';
           console.log('Mobile: unmuted via video click');
         }
       }, { once: true });
+    } else {
+      console.log('Mobile handlers NOT setup - isMobile:', isMobile, 'mobileUnmute:', !!mobileUnmute);
     }
     
     const retryOnConflict = this.hasAttribute('retry');
