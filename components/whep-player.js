@@ -15,6 +15,9 @@ customElements.define("whep-player", class extends HTMLElement {
 
     const autoplay = this.hasAttribute("autoplay");
     const muted = this.hasAttribute("muted");
+    
+    // Detect mobile for audio handling
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     this.innerHTML = `
       <div style="position: relative; width: 100%; max-width: 100%;">
@@ -22,15 +25,48 @@ customElements.define("whep-player", class extends HTMLElement {
           style="width: 100%; max-width: 100%; border-radius: 8px; background: #000;"
           controls 
           ${autoplay ? 'autoplay' : ''} 
-          ${muted ? 'muted' : ''}
+          ${muted || isMobile ? 'muted' : ''}
           playsinline
         ></video>
+        ${isMobile ? '<div class="mobile-unmute" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 20px 30px; border-radius: 8px; font-size: 18px; cursor: pointer; display: none; z-index: 10; pointer-events: auto;">🔊 Tap for Audio</div>' : ''}
         <div class="whep-status" style="margin-top: 8px; font-size: 0.9em; color: #666;"></div>
       </div>
     `;
 
     const video = this.querySelector('video');
     const status = this.querySelector('.whep-status');
+    const mobileUnmute = this.querySelector('.mobile-unmute');
+    
+    // Mobile audio unmute handler
+    if (isMobile && mobileUnmute) {
+      let isSetup = false;
+      
+      // Show unmute button after video starts playing
+      video.addEventListener('playing', () => {
+        if (!isSetup && video.muted) {
+          mobileUnmute.style.display = 'block';
+          isSetup = true;
+        }
+      });
+      
+      // Handle tap to unmute
+      mobileUnmute.addEventListener('click', () => {
+        video.muted = false;
+        video.volume = 1.0;
+        mobileUnmute.style.display = 'none';
+        console.log('Mobile: unmuted via user interaction');
+      });
+      
+      // Also unmute if user taps the video directly
+      video.addEventListener('click', () => {
+        if (video.muted) {
+          video.muted = false;
+          video.volume = 1.0;
+          if (mobileUnmute) mobileUnmute.style.display = 'none';
+          console.log('Mobile: unmuted via video click');
+        }
+      }, { once: true });
+    }
     
     const retryOnConflict = this.hasAttribute('retry');
     this.playWHEP(url, video, status, retryOnConflict);
