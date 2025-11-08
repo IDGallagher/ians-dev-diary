@@ -25,50 +25,12 @@ customElements.define("whep-player", class extends HTMLElement {
           ${muted ? 'muted' : ''}
           playsinline
         ></video>
-        <div style="margin-top: 8px;">
-          <button class="play-unmute-btn" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;">
-            ▶️ Click to Play with Audio
-          </button>
-          <div class="whep-status" style="display: inline-block; margin-left: 12px; font-size: 0.9em; color: #666;"></div>
-        </div>
+        <div class="whep-status" style="margin-top: 8px; font-size: 0.9em; color: #666;"></div>
       </div>
     `;
 
     const video = this.querySelector('video');
     const status = this.querySelector('.whep-status');
-    const playBtn = this.querySelector('.play-unmute-btn');
-    
-    // Play button - unmute and play
-    playBtn.addEventListener('click', () => {
-      console.log('Play button clicked');
-      video.muted = false;
-      video.volume = 1.0;
-      
-      video.play().then(() => {
-        console.log('✅ Playback started successfully!');
-        console.log('Video state: muted=', video.muted, 'volume=', video.volume, 'paused=', video.paused);
-        playBtn.textContent = '🔊 Playing with Audio';
-        playBtn.style.background = '#43a047';
-        playBtn.disabled = true;
-        
-        // Check audio track state
-        if (video.srcObject) {
-          const audioTracks = video.srcObject.getAudioTracks();
-          audioTracks.forEach(track => {
-            console.log('Audio track after play:', {
-              id: track.id,
-              enabled: track.enabled,
-              muted: track.muted,
-              readyState: track.readyState
-            });
-          });
-        }
-      }).catch(err => {
-        console.error('❌ Play failed:', err);
-        playBtn.textContent = '⚠️ Play failed - try again';
-        playBtn.style.background = '#d32f2f';
-      });
-    });
     
     const retryOnConflict = this.hasAttribute('retry');
     this.playWHEP(url, video, status, retryOnConflict);
@@ -92,76 +54,36 @@ customElements.define("whep-player", class extends HTMLElement {
       let audioTrack = null;
       
       pc.ontrack = (event) => {
-        console.log('Received track:', event.track.kind, event.track);
+        console.log('Received track:', event.track.kind);
         receivedTracks.push(event.track);
         
         if (event.track.kind === 'video') {
           videoTrack = event.track;
         } else if (event.track.kind === 'audio') {
           audioTrack = event.track;
-          
           const settings = event.track.getSettings();
-          console.log('Audio track settings:', settings);
-          console.log('Audio track channelCount:', settings.channelCount || 'UNKNOWN');
-          console.log('Audio track sampleRate:', settings.sampleRate || 'UNKNOWN');
-          console.log('Audio track readyState:', event.track.readyState);
-          console.log('Audio track muted:', event.track.muted);
-          console.log('Audio track enabled:', event.track.enabled);
-          
-          event.track.onmute = () => {
-            console.log('Audio track MUTED event fired');
-          };
-          event.track.onunmute = () => {
-            console.log('Audio track UNMUTED event fired - Audio should now flow!');
-            console.log('Track settings after unmute:', event.track.getSettings());
-          };
-          event.track.onended = () => {
-            console.log('Audio track ended');
-          };
+          console.log('Audio: channelCount=' + (settings.channelCount || 'unknown') + ', sampleRate=' + (settings.sampleRate || 'unknown'));
         }
         
         // Wait until we have both tracks, then set up the stream
         if (videoTrack && audioTrack) {
-          console.log('🎬 Both video and audio tracks received, setting up stream...');
+          console.log('Setting up stream with video + audio tracks');
           
-          // Create a new MediaStream with both tracks
+          // Create a new MediaStream with both tracks explicitly
           const stream = new MediaStream([videoTrack, audioTrack]);
           
-          console.log('Created MediaStream with tracks:', stream.getTracks().map(t => ({
-            kind: t.kind,
-            id: t.id,
-            enabled: t.enabled,
-            muted: t.muted,
-            readyState: t.readyState
-          })));
-          
           videoElement.srcObject = stream;
-          
-          // Ensure audio track is enabled
           audioTrack.enabled = true;
           
           // Try to play
           setTimeout(() => {
             videoElement.play().then(() => {
-              console.log('✅ Video playback started');
-              console.log('Video element muted:', videoElement.muted);
-              console.log('Video element volume:', videoElement.volume);
-              console.log('Video element paused:', videoElement.paused);
-              
-              // Verify the stream in the video element
-              if (videoElement.srcObject) {
-                const tracks = videoElement.srcObject.getTracks();
-                console.log('Video element has', tracks.length, 'tracks:');
-                tracks.forEach(t => {
-                  console.log(`  - ${t.kind}: enabled=${t.enabled}, muted=${t.muted}, readyState=${t.readyState}`);
-                });
-              }
-              
+              console.log('Playback started');
               statusElement.textContent = '✅ Connected & Playing';
               setTimeout(() => statusElement.textContent = '', 3000);
             }).catch(err => {
               console.error('Autoplay failed:', err);
-              statusElement.textContent = '⚠️ Click "Play with Audio" button';
+              statusElement.textContent = '⚠️ Click play button to start';
               statusElement.style.color = '#ff9800';
             });
           }, 200);
@@ -207,7 +129,6 @@ customElements.define("whep-player", class extends HTMLElement {
           }
           return match;
         });
-        console.log('Modified SDP for stereo audio with payload', opusPayload);
       }
       
       // Update the local description with modified SDP
@@ -217,8 +138,7 @@ customElements.define("whep-player", class extends HTMLElement {
       });
 
       // Send offer to WHEP endpoint
-      console.log('Sending WHEP request to:', whepUrl);
-      console.log('SDP offer (with stereo):', sdp);
+      console.log('Connecting to WHEP endpoint:', whepUrl);
       const response = await fetch(whepUrl, {
         method: 'POST',
         headers: { 
@@ -244,13 +164,6 @@ customElements.define("whep-player", class extends HTMLElement {
 
       // Get SDP answer and set as remote description
       const answerSdp = await response.text();
-      console.log('SDP answer from server:', answerSdp);
-      
-      // Check what audio codecs the server is offering
-      const audioLines = answerSdp.split('\n').filter(line => 
-        line.includes('m=audio') || line.includes('a=rtpmap') && answerSdp.indexOf(line) > answerSdp.indexOf('m=audio')
-      );
-      console.log('Audio lines in answer:', audioLines);
       
       await pc.setRemoteDescription({
         type: 'answer',
@@ -258,9 +171,6 @@ customElements.define("whep-player", class extends HTMLElement {
       });
 
       console.log('WHEP connection established');
-      console.log('Peer connection state:', pc.connectionState);
-      console.log('ICE connection state:', pc.iceConnectionState);
-      console.log('Signaling state:', pc.signalingState);
       
       // Store peer connection for cleanup
       this._pc = pc;
